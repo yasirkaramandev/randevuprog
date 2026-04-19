@@ -104,7 +104,7 @@ export default function Home() {
           Uygun bir oturum seçerek randevunuzu oluşturun
         </p>
         <div className="info-badge">
-          <span>⏱️</span> Her oturum 15 dakika
+          <span>⏱️</span> Her oturum 15 dk + 5 dk mola
         </div>
         <p className="subtitle" style={{marginTop: '16px', color: '#1e293b', fontWeight: '500'}}>
           💻 Toplantılar <strong>Google Meet</strong> üzerinden yapılacaktır.<br/>

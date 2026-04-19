@@ -1,37 +1,21 @@
 import { NextResponse } from "next/server";
-import { getBookingsJSON, deleteBooking } from "@/lib/db";
+import { deleteBooking, getBookingsJSON } from "@/lib/db";
+import {
+  isAuthorizedRequest,
+  unauthorizedResponse,
+} from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-// Auth kontrolü helper
-function checkAuth(request) {
-  const authHeader = request.headers.get("authorization");
-
-  if (!authHeader || !authHeader.startsWith("Basic ")) {
-    return false;
-  }
-
-  const base64Credentials = authHeader.split(" ")[1];
-  const credentials = atob(base64Credentials);
-  const [username, password] = credentials.split(":");
-
-  return username === "yasir" && password === "admin";
-}
-
-function unauthorizedResponse() {
-  return new NextResponse("Yetkilendirme gerekli", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Admin Panel"' },
-  });
-}
-
 export async function GET(request) {
-  if (!checkAuth(request)) return unauthorizedResponse();
+  if (!isAuthorizedRequest(request)) {
+    return unauthorizedResponse();
+  }
 
   try {
     const bookings = await getBookingsJSON();
     return NextResponse.json({ bookings, toplam: bookings.length });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Randevular yüklenirken hata oluştu." },
       { status: 500 }
@@ -40,7 +24,9 @@ export async function GET(request) {
 }
 
 export async function DELETE(request) {
-  if (!checkAuth(request)) return unauthorizedResponse();
+  if (!isAuthorizedRequest(request)) {
+    return unauthorizedResponse();
+  }
 
   try {
     const { slotId } = await request.json();
@@ -59,7 +45,7 @@ export async function DELETE(request) {
     }
 
     return NextResponse.json({ success: true, message: "Randevu silindi." });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Randevu silinirken hata oluştu." },
       { status: 500 }
