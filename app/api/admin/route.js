@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { deleteBooking, getBookingsJSON } from "@/lib/db";
+import {
+  deleteBooking,
+  getBookingsJSON,
+  getScheduleSummariesForAdmin,
+} from "@/lib/db";
 import {
   isAuthorizedRequest,
   unauthorizedResponse,
@@ -13,8 +17,16 @@ export async function GET(request) {
   }
 
   try {
-    const bookings = await getBookingsJSON();
-    return NextResponse.json({ bookings, toplam: bookings.length });
+    const [bookings, schedules] = await Promise.all([
+      getBookingsJSON(),
+      getScheduleSummariesForAdmin(),
+    ]);
+
+    return NextResponse.json({
+      bookings,
+      toplam: bookings.length,
+      schedules,
+    });
   } catch {
     return NextResponse.json(
       { error: "Randevular yüklenirken hata oluştu." },

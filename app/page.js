@@ -106,6 +106,9 @@ export default function Home() {
         <div className="info-badge">
           <span>⏱️</span> Her oturum 15 dk + 5 dk mola
         </div>
+        <p className="subtitle schedule-note">
+          Tarihler admin panelden dinamik olarak yönetilir.
+        </p>
         <p className="subtitle" style={{marginTop: '16px', color: '#1e293b', fontWeight: '500'}}>
           💻 Toplantılar <strong>Google Meet</strong> üzerinden yapılacaktır.<br/>
           📲 Toplantı zamanı geldiğinde, girdiğiniz telefon numarasına WhatsApp üzerinden katılım linki iletilecektir.

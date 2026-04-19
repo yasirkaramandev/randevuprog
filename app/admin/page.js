@@ -8,64 +8,75 @@ const EMPTY_LOGIN_FORM = {
   username: "",
   password: "",
 };
+const EMPTY_SCHEDULE_FORM = {
+  dateKey: "2026-04-20",
+  start: "18:00",
+  end: "19:30",
+};
 
 export default function AdminPage() {
-  const [bookings, setBookings] = useState(null);
+  const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authHeader, setAuthHeader] = useState("");
   const [loginForm, setLoginForm] = useState(EMPTY_LOGIN_FORM);
+  const [scheduleForm, setScheduleForm] = useState(EMPTY_SCHEDULE_FORM);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [deletingSchedule, setDeletingSchedule] = useState(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
   const [excelDownloading, setExcelDownloading] = useState(false);
 
   const handleLogout = useCallback((nextError = null) => {
     window.sessionStorage.removeItem(STORAGE_KEY);
     setAuthHeader("");
-    setBookings(null);
+    setAdminData(null);
     setMessage(null);
     setError(nextError);
     setLoginForm(EMPTY_LOGIN_FORM);
     setLoading(false);
   }, []);
 
-  const fetchBookings = useCallback(async (headerValue) => {
-    if (!headerValue) {
-      setLoading(false);
-      return false;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/admin", {
-        headers: { Authorization: headerValue },
-        cache: "no-store",
-      });
-
-      if (res.status === 401) {
-        handleLogout("Kullanıcı adı veya şifre hatalı.");
+  const fetchAdminData = useCallback(
+    async (headerValue) => {
+      if (!headerValue) {
+        setLoading(false);
         return false;
       }
 
-      const data = await res.json();
+      setLoading(true);
+      setError(null);
 
-      if (!res.ok) {
-        setError(data.error || "Veri yüklenemedi.");
+      try {
+        const res = await fetch("/api/admin", {
+          headers: { Authorization: headerValue },
+          cache: "no-store",
+        });
+
+        if (res.status === 401) {
+          handleLogout("Kullanıcı adı veya şifre hatalı.");
+          return false;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error || "Veri yüklenemedi.");
+          return false;
+        }
+
+        setAdminData(data);
+        return true;
+      } catch {
+        setError("Veri yüklenemedi.");
         return false;
+      } finally {
+        setLoading(false);
       }
-
-      setBookings(data);
-      return true;
-    } catch {
-      setError("Veri yüklenemedi.");
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [handleLogout]);
+    },
+    [handleLogout]
+  );
 
   useEffect(() => {
     const savedAuthHeader = window.sessionStorage.getItem(STORAGE_KEY) || "";
@@ -76,8 +87,8 @@ export default function AdminPage() {
     }
 
     setAuthHeader(savedAuthHeader);
-    void fetchBookings(savedAuthHeader);
-  }, [fetchBookings]);
+    void fetchAdminData(savedAuthHeader);
+  }, [fetchAdminData]);
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -89,7 +100,7 @@ export default function AdminPage() {
       `${loginForm.username}:${loginForm.password}`
     )}`;
 
-    const success = await fetchBookings(nextAuthHeader);
+    const success = await fetchAdminData(nextAuthHeader);
 
     if (success) {
       window.sessionStorage.setItem(STORAGE_KEY, nextAuthHeader);
@@ -99,6 +110,98 @@ export default function AdminPage() {
     }
 
     setAuthSubmitting(false);
+  }
+
+  async function handleScheduleSubmit(event) {
+    event.preventDefault();
+    setScheduleSubmitting(true);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/admin/schedules", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify(scheduleForm),
+      });
+
+      if (res.status === 401) {
+        handleLogout("Oturum süresi doldu. Tekrar giriş yapınız.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          type: "error",
+          text: data.error || "Program eklenemedi.",
+        });
+        return;
+      }
+
+      setMessage({ type: "success", text: data.message });
+      await fetchAdminData(authHeader);
+      setScheduleForm({
+        dateKey: scheduleForm.dateKey,
+        start: scheduleForm.start,
+        end: scheduleForm.end,
+      });
+    } catch {
+      setMessage({ type: "error", text: "Program eklenemedi." });
+    } finally {
+      setScheduleSubmitting(false);
+    }
+  }
+
+  async function handleScheduleDelete(scheduleId, dateLabel, rangeLabel) {
+    if (
+      !confirm(
+        `"${dateLabel} ${rangeLabel}" programını silmek istediğinize emin misiniz?`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingSchedule(scheduleId);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/admin/schedules", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({ scheduleId }),
+      });
+
+      if (res.status === 401) {
+        handleLogout("Oturum süresi doldu. Tekrar giriş yapınız.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          type: "error",
+          text: data.error || "Program silinemedi.",
+        });
+        return;
+      }
+
+      setMessage({ type: "success", text: data.message });
+      await fetchAdminData(authHeader);
+    } catch {
+      setMessage({ type: "error", text: "Program silinemedi." });
+    } finally {
+      setDeletingSchedule(null);
+    }
   }
 
   async function handleDelete(slotId, oturum) {
@@ -129,7 +232,7 @@ export default function AdminPage() {
 
       if (res.ok) {
         setMessage({ type: "success", text: `${oturum} randevusu silindi.` });
-        await fetchBookings(authHeader);
+        await fetchAdminData(authHeader);
       } else {
         setMessage({ type: "error", text: data.error || "Silme başarısız." });
       }
@@ -180,9 +283,9 @@ export default function AdminPage() {
   }
 
   function downloadJSON() {
-    if (!bookings) return;
+    if (!adminData) return;
 
-    const blob = new Blob([JSON.stringify(bookings, null, 2)], {
+    const blob = new Blob([JSON.stringify(adminData, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -207,12 +310,14 @@ export default function AdminPage() {
           <section className="admin-login-card">
             <h2>Giriş Yap</h2>
             <p className="admin-login-copy">
-              Admin kayıtlarını görüntülemek, silmek ve Excel olarak indirmek
-              için kullanıcı adı ve şifre giriniz.
+              Admin kayıtlarını görüntülemek, tarih aralığı oluşturmak ve Excel
+              olarak indirmek için kullanıcı adı ve şifre giriniz.
             </p>
 
             {error && <div className="message error">{error}</div>}
-            {message && <div className={`message ${message.type}`}>{message.text}</div>}
+            {message && (
+              <div className={`message ${message.type}`}>{message.text}</div>
+            )}
 
             <form className="admin-login-form" onSubmit={handleLogin}>
               <div className="form-group">
@@ -283,92 +388,194 @@ export default function AdminPage() {
       <header className="header">
         <div className="header-icon">🔐</div>
         <h1>Admin Panel</h1>
-        <p className="subtitle">Tüm randevu kayıtları</p>
+        <p className="subtitle">Program oluşturun, randevuları yönetin</p>
         <div className="info-badge">
-          <span>📊</span> Toplam: {bookings?.toplam || 0} randevu
+          <span>📊</span> Toplam: {adminData?.toplam || 0} randevu
         </div>
       </header>
 
-      <main className="admin-content">
-        <div className="admin-actions">
-          <div className="admin-action-row">
-            <button
-              className="submit-btn"
-              onClick={handleExcelDownload}
-              disabled={excelDownloading}
-            >
-              {excelDownloading ? "Excel hazırlanıyor..." : "📥 Excel İndir"}
-            </button>
-            <button className="secondary-btn" onClick={downloadJSON}>
-              JSON İndir
-            </button>
+      <main className="admin-stack">
+        <section className="admin-content">
+          <div className="section-heading">
+            <div>
+              <h2>Program Oluştur</h2>
+              <p>Bir tarih ve saat aralığı ekleyin, sistem oturumları otomatik üretsin.</p>
+            </div>
+            <span className="schedule-rule-pill">15 dk görüşme + 5 dk mola</span>
           </div>
 
-          <div className="admin-action-row">
-            <Link href="/" className="back-link">
-              ← Ana Sayfaya Dön
-            </Link>
-            <button className="logout-btn" onClick={() => handleLogout()}>
-              Çıkış Yap
+          <form className="schedule-form" onSubmit={handleScheduleSubmit}>
+            <div className="form-group">
+              <label htmlFor="dateKey">Tarih</label>
+              <input
+                id="dateKey"
+                type="date"
+                required
+                value={scheduleForm.dateKey}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({
+                    ...current,
+                    dateKey: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="startTime">Başlangıç</label>
+              <input
+                id="startTime"
+                type="time"
+                required
+                value={scheduleForm.start}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({
+                    ...current,
+                    start: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="endTime">Bitiş</label>
+              <input
+                id="endTime"
+                type="time"
+                required
+                value={scheduleForm.end}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({
+                    ...current,
+                    end: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <button className="submit-btn schedule-submit-btn" type="submit" disabled={scheduleSubmitting}>
+              {scheduleSubmitting ? "Ekleniyor..." : "➕ Program Ekle"}
             </button>
+          </form>
+
+          {error && <div className="message error">{error}</div>}
+          {message && <div className={`message ${message.type}`}>{message.text}</div>}
+
+          <div className="schedule-grid">
+            {adminData?.schedules?.map((schedule) => (
+              <article key={schedule.id} className="schedule-card">
+                <div className="schedule-card-top">
+                  <div>
+                    <h3>{schedule.dateLabel}</h3>
+                    <p>{schedule.rangeLabel}</p>
+                  </div>
+                  <button
+                    className="delete-btn"
+                    onClick={() =>
+                      handleScheduleDelete(
+                        schedule.id,
+                        schedule.dateLabel,
+                        schedule.rangeLabel
+                      )
+                    }
+                    disabled={deletingSchedule === schedule.id}
+                  >
+                    {deletingSchedule === schedule.id ? "⏳" : "🗑️"}
+                  </button>
+                </div>
+                <div className="schedule-meta">
+                  <span>{schedule.slotCount} oturum</span>
+                </div>
+                <p className="schedule-preview">
+                  {schedule.slotTimes.join(" • ")}
+                </p>
+              </article>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {error && <div className="message error">{error}</div>}
-        {message && <div className={`message ${message.type}`}>{message.text}</div>}
+        <section className="admin-content">
+          <div className="admin-actions">
+            <div className="admin-action-row">
+              <button
+                className="submit-btn"
+                onClick={handleExcelDownload}
+                disabled={excelDownloading}
+              >
+                {excelDownloading ? "Excel hazırlanıyor..." : "📥 Excel İndir"}
+              </button>
+              <button className="secondary-btn" onClick={downloadJSON}>
+                JSON İndir
+              </button>
+            </div>
 
-        {bookings?.bookings?.length > 0 ? (
-          <>
-            <div className="table-responsive">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Oturum</th>
-                    <th>Tarih</th>
-                    <th>Saat</th>
-                    <th>Öğrenci</th>
-                    <th>Veli</th>
-                    <th>Telefon</th>
-                    <th>İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.bookings.map((booking) => (
-                    <tr key={booking.slotId}>
-                      <td data-label="Oturum">{booking.oturum}</td>
-                      <td data-label="Tarih">{booking.tarih}</td>
-                      <td data-label="Saat">{booking.saat}</td>
-                      <td data-label="Öğrenci">{booking.studentName}</td>
-                      <td data-label="Veli">{booking.parentName}</td>
-                      <td data-label="Telefon">{booking.phone}</td>
-                      <td data-label="İşlem">
-                        <button
-                          className="delete-btn"
-                          onClick={() =>
-                            handleDelete(booking.slotId, booking.oturum)
-                          }
-                          disabled={deleting === booking.slotId}
-                        >
-                          {deleting === booking.slotId ? "⏳" : "🗑️ Sil"}
-                        </button>
-                      </td>
+            <div className="admin-action-row">
+              <Link href="/" className="back-link">
+                ← Ana Sayfaya Dön
+              </Link>
+              <button className="logout-btn" onClick={() => handleLogout()}>
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+
+          <div className="section-heading section-heading-inline">
+            <div>
+              <h2>Randevu Kayıtları</h2>
+              <p>Mevcut rezervasyonları inceleyin ve gerektiğinde silin.</p>
+            </div>
+          </div>
+
+          {adminData?.bookings?.length > 0 ? (
+            <>
+              <div className="table-responsive">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Oturum</th>
+                      <th>Tarih</th>
+                      <th>Saat</th>
+                      <th>Öğrenci</th>
+                      <th>Veli</th>
+                      <th>Telefon</th>
+                      <th>İşlem</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {adminData.bookings.map((booking) => (
+                      <tr key={booking.slotId}>
+                        <td data-label="Oturum">{booking.oturum}</td>
+                        <td data-label="Tarih">{booking.tarih}</td>
+                        <td data-label="Saat">{booking.saat}</td>
+                        <td data-label="Öğrenci">{booking.studentName}</td>
+                        <td data-label="Veli">{booking.parentName}</td>
+                        <td data-label="Telefon">{booking.phone}</td>
+                        <td data-label="İşlem">
+                          <button
+                            className="delete-btn"
+                            onClick={() =>
+                              handleDelete(booking.slotId, booking.oturum)
+                            }
+                            disabled={deleting === booking.slotId}
+                          >
+                            {deleting === booking.slotId ? "⏳" : "🗑️ Sil"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="json-preview">
-              <h3>📄 JSON Görünümü</h3>
-              <pre>{JSON.stringify(bookings, null, 2)}</pre>
+              <div className="json-preview">
+                <h3>📄 JSON Görünümü</h3>
+                <pre>{JSON.stringify(adminData, null, 2)}</pre>
+              </div>
+            </>
+          ) : (
+            <div className="empty-state">
+              <span className="empty-icon">📭</span>
+              <p>Henüz randevu alınmamış.</p>
             </div>
-          </>
-        ) : (
-          <div className="empty-state">
-            <span className="empty-icon">📭</span>
-            <p>Henüz randevu alınmamış.</p>
-          </div>
-        )}
+          )}
+        </section>
       </main>
     </div>
   );

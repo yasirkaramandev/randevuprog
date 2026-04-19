@@ -82,6 +82,11 @@ body {
   margin-bottom: 16px;
 }
 
+.schedule-note {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
 .info-badge {
   display: inline-flex;
   align-items: center;
@@ -440,6 +445,106 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+.admin-stack {
+  display: grid;
+  gap: 24px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.section-heading h2 {
+  font-size: 1.2rem;
+  color: var(--gray-900);
+  margin-bottom: 6px;
+}
+
+.section-heading p {
+  color: var(--gray-500);
+  line-height: 1.5;
+}
+
+.section-heading-inline {
+  margin-top: 4px;
+}
+
+.schedule-rule-pill {
+  background: #eef2ff;
+  color: var(--primary-dark);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.schedule-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.schedule-submit-btn {
+  align-self: end;
+  min-height: 50px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.schedule-card {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.schedule-card h3 {
+  font-size: 1rem;
+  color: var(--gray-900);
+  margin-bottom: 6px;
+}
+
+.schedule-card p {
+  color: var(--gray-600);
+}
+
+.schedule-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.schedule-preview {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .admin-actions {
   display: flex;
   align-items: flex-start;
@@ -662,6 +767,14 @@ body {
   .admin-content,
   .admin-login-card {
     padding: 20px 16px;
+  }
+
+  .section-heading {
+    flex-direction: column;
+  }
+
+  .schedule-form {
+    grid-template-columns: 1fr;
   }
 
   .admin-actions,
